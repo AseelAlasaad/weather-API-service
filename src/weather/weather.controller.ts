@@ -20,11 +20,19 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { ThrottlerGuard } from '@nestjs/throttler';
-
+import { InvalidWeatherQueryException, AllProvidersFailedException } from './errors/error-service';
 @ApiTags('weather')
 @Controller('weather')
 export class WeatherController {
   constructor(private readonly weatherService: WeatherService) {}
+
+   //Health check endpoint
+  @Get('health')
+  @ApiOkResponse({ description: 'Service is running.' })
+  healthCheck() {
+    return { status: 'ok', timestamp: new Date().toISOString() };
+  }
+
   @UseGuards(ThrottlerGuard)
   @Get()
   @ApiOkResponse({ description: 'Current weather data successfully retrieved.' })
@@ -41,19 +49,15 @@ export class WeatherController {
     try {
       return await this.weatherService.getWeather(query);
     } catch (error) {
-      if (error instanceof HttpException && error.getStatus() === 400) {
+      if (error instanceof InvalidWeatherQueryException) {
         throw new BadRequestException(error.message);
       }
-
-      if (error instanceof HttpException && error.getStatus() === 503) {
-        throw new ServiceUnavailableException(error.message);
-      }
-
       if (error instanceof HttpException && error.getStatus() === 404) {
         throw new NotFoundException(error.message);
       }
-
-      console.error('Unexpected error in getWeather:', error);
+       if (error instanceof AllProvidersFailedException) {
+      throw new ServiceUnavailableException(`All providers failed. Error ID: ${error.errorId}`);
+    }
       throw new InternalServerErrorException(
         'An unexpected error occurred. Please try again later.',
       );

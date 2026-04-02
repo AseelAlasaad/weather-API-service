@@ -12,7 +12,7 @@ describe('WeatherAPIProvider', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         WeatherAPIProvider,
-        { provide: HttpService, useValue: {} }, // we don't call HTTP in these tests
+        { provide: HttpService, useValue: {} }, 
       ],
     }).compile();
 

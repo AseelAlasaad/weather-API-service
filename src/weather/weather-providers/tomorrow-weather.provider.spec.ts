@@ -4,7 +4,7 @@ describe('TomorrowWeatherProvider', () => {
   let provider: TomorrowWeatherProvider;
 
   beforeEach(() => {
-    provider = new TomorrowWeatherProvider({} as any); // HttpService mock not needed for mapResponse test
+    provider = new TomorrowWeatherProvider({} as any); 
     process.env.TOMORROW_API_KEY = 'test-api-key';
   });
 
