@@ -5,9 +5,9 @@ import { setupSwagger } from './configurations/swagger.config';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.enableCors(); 
+  app.enableCors(); // allow browser requests
 
-  setupSwagger(app); 
+  setupSwagger(app); // your existing Swagger setup
 
   await app.listen(3000);
 }

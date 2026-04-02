@@ -5,12 +5,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TomorrowWeatherProvider } from './weather-providers/tomorrow-weather.provider';
 import { WeatherAPIProvider } from './weather-providers/weatherapiprovider.provider';
 import { InvalidWeatherQueryException, AllProvidersFailedException } from './errors/error-service';
-
+import { RedisService } from '../common/redis/redis.service';
+import { RedisModule } from '../common/redis/redis.module';
 describe('WeatherService', () => {
   let service: WeatherService;
   let prisma: PrismaService;
   let tomorrow: TomorrowWeatherProvider;
   let weatherApi: WeatherAPIProvider;
+  let redis: RedisService;
 
   const mockPrisma = {
     weatherRequest: { create: jest.fn(), update: jest.fn() },
@@ -35,6 +37,12 @@ describe('WeatherService', () => {
         { provide: PrismaService, useValue: mockPrisma },
         { provide: TomorrowWeatherProvider, useValue: mockTomorrow },
         { provide: WeatherAPIProvider, useValue: mockWeatherApi },
+        {
+          provide: RedisService, useValue: { // <-- Mock Redis methods your service uses
+            get: jest.fn(),
+            set: jest.fn(),
+          }
+        },
       ],
     }).compile();
 
@@ -42,6 +50,8 @@ describe('WeatherService', () => {
     prisma = module.get(PrismaService);
     tomorrow = module.get(TomorrowWeatherProvider);
     weatherApi = module.get(WeatherAPIProvider);
+    redis = module.get(RedisService);
+
 
     // Mock formatError for testing
     service.formatError = (err: any) => err.message || 'Service unavailable';
