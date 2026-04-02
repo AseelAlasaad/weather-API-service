@@ -1,18 +1,24 @@
-// src/app.module.ts
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { PrismaModule } from './prisma/prisma.module';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { WeatherModule } from './weather/weather.module';
-import { RateLimiterModule } from './common/rate-limiter/rate-limiter.module';
+import { BrowserThrottlerGuard } from './common/guards/browser-throttler.guard';
 
 @Module({
   imports: [
-    PrismaModule,
-    WeatherModule,   
-    RateLimiterModule,
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // 60s in ms
+        limit: 5,   // max 5 requests per ttl
+      },
+    ]),
+    WeatherModule,
   ],
-  controllers: [AppController], 
-  providers: [AppService],      
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: BrowserThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}
