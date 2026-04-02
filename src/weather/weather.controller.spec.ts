@@ -46,6 +46,17 @@ describe('WeatherController', () => {
     expect(weatherController).toBeDefined();
   });
 
+    // Health check endpoint test
+  describe('healthCheck', () => {
+    it('should return status ok and a timestamp', () => {
+      const result = weatherController.healthCheck();
+      expect(result).toHaveProperty('status', 'ok');
+      expect(result).toHaveProperty('timestamp');
+      // Validate timestamp is a valid ISO string
+      expect(new Date(result.timestamp).toISOString()).toEqual(result.timestamp);
+    });
+  });
+
   it('should return weather successfully', async () => {
     const mockResponse = {
       provider: 'Tomorrow',
