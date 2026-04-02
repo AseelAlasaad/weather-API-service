@@ -9,6 +9,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { GetWeatherDto } from './dto/weather.dto';
+import { InvalidWeatherQueryException, AllProvidersFailedException } from './errors/error-service';
 
 describe('WeatherController', () => {
   let weatherController: WeatherController;
@@ -19,7 +20,6 @@ describe('WeatherController', () => {
     getWeather: jest.fn(),
   };
 
-  // Silence console.error during tests
   beforeAll(() => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
   });
@@ -33,7 +33,6 @@ describe('WeatherController', () => {
       controllers: [WeatherController],
       providers: [{ provide: WeatherService, useValue: mockWeatherService }],
     })
-      // Mock ThrottlerGuard
       .overrideGuard(ThrottlerGuard)
       .useValue({ canActivate: () => true })
       .compile();
@@ -44,6 +43,16 @@ describe('WeatherController', () => {
 
   it('should be defined', () => {
     expect(weatherController).toBeDefined();
+  });
+
+  // Health check
+  describe('healthCheck', () => {
+    it('should return status ok and timestamp', () => {
+      const result = weatherController.healthCheck();
+      expect(result).toHaveProperty('status', 'ok');
+      expect(result).toHaveProperty('timestamp');
+      expect(new Date(result.timestamp).toISOString()).toEqual(result.timestamp);
+    });
   });
 
   it('should return weather successfully', async () => {
@@ -60,17 +69,17 @@ describe('WeatherController', () => {
     expect(mockWeatherService.getWeather).toHaveBeenCalledWith({ city: 'Amman' });
   });
 
-  it('should throw BadRequestException for invalid query', async () => {
+  it('should throw BadRequestException for InvalidWeatherQueryException', async () => {
     mockWeatherService.getWeather.mockImplementation(() => {
-      throw new BadRequestException('Invalid query');
+      throw new InvalidWeatherQueryException();
     });
 
     await expect(weatherController.getWeather({} as GetWeatherDto)).rejects.toThrow(BadRequestException);
   });
 
-  it('should throw ServiceUnavailableException if providers fail', async () => {
+  it('should throw ServiceUnavailableException for AllProvidersFailedException', async () => {
     mockWeatherService.getWeather.mockImplementation(() => {
-      throw new ServiceUnavailableException('All providers failed');
+      throw new AllProvidersFailedException('error-id-123');
     });
 
     await expect(weatherController.getWeather({ city: 'Amman' } as GetWeatherDto)).rejects.toThrow(
@@ -89,16 +98,15 @@ describe('WeatherController', () => {
   });
 
   it('should reject requests exceeding rate limit', async () => {
-  const module: TestingModule = await Test.createTestingModule({
-    controllers: [WeatherController],
-    providers: [{ provide: WeatherService, useValue: mockWeatherService }],
-  })
-    .overrideGuard(ThrottlerGuard)
-    .useValue({ canActivate: () => false })
-    .compile();
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [WeatherController],
+      providers: [{ provide: WeatherService, useValue: mockWeatherService }],
+    })
+      .overrideGuard(ThrottlerGuard)
+      .useValue({ canActivate: () => false })
+      .compile();
 
-  const controller = module.get<WeatherController>(WeatherController);
-
-  await expect(controller.getWeather({ city: 'Amman' } as GetWeatherDto)).rejects.toThrow();
-});
+    const controller = module.get<WeatherController>(WeatherController);
+    await expect(controller.getWeather({ city: 'Amman' } as GetWeatherDto)).rejects.toThrow();
+  });
 });

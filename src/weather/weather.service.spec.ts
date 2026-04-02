@@ -1,9 +1,10 @@
+// src/weather/weather.service.spec.ts
 import { Test, TestingModule } from '@nestjs/testing';
 import { WeatherService } from './weather.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TomorrowWeatherProvider } from './weather-providers/tomorrow-weather.provider';
 import { WeatherAPIProvider } from './weather-providers/weatherapiprovider.provider';
-import { HttpException } from '@nestjs/common';
+import { InvalidWeatherQueryException, AllProvidersFailedException } from './errors/error-service';
 
 describe('WeatherService', () => {
   let service: WeatherService;
@@ -45,7 +46,7 @@ describe('WeatherService', () => {
     // Mock formatError for testing
     service.formatError = (err: any) => err.message || 'Service unavailable';
 
-    // Make Prisma mocks return objects with an id
+    // Mock Prisma to return objects with id
     mockPrisma.weatherRequest.create.mockImplementation(async (data) => ({ id: 'req-123', ...data }));
     mockPrisma.weatherRequest.update.mockImplementation(async (data) => data);
     mockPrisma.providerLog.create.mockImplementation(async (data) => data);
@@ -55,10 +56,10 @@ describe('WeatherService', () => {
     expect(service).toBeDefined();
   });
 
-  it('should throw BAD_REQUEST if both city and coords are provided', async () => {
+  it('should throw InvalidWeatherQueryException if both city and coords are provided', async () => {
     await expect(
       service.getWeather({ city: 'Amman', lat: 1, lon: 2 }),
-    ).rejects.toThrow(HttpException);
+    ).rejects.toThrow(InvalidWeatherQueryException);
   });
 
   it('should return weather from primary provider', async () => {
@@ -90,10 +91,10 @@ describe('WeatherService', () => {
     expect(mockWeatherApi.getWeatherByCity).toHaveBeenCalledWith('Amman');
   });
 
-  it('should throw 503 if all providers fail', async () => {
+  it('should throw AllProvidersFailedException if all providers fail', async () => {
     mockTomorrow.getWeatherByCity.mockRejectedValue(new Error('Fail'));
     mockWeatherApi.getWeatherByCity.mockRejectedValue(new Error('Fail too'));
 
-    await expect(service.getWeather({ city: 'Amman' })).rejects.toThrow(HttpException);
+    await expect(service.getWeather({ city: 'Amman' })).rejects.toThrow(AllProvidersFailedException);
   });
 });
