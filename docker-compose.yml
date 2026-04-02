@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  weather-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: weather-service:latest
+    container_name: weather-service
+    ports:
+      - "3000:3000"  # API
+      - "5555:5555" # Prisma Studio
+    volumes:
+      - ./:/usr/src/app
+      - /usr/src/app/node_modules
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/mydb
+      NODE_ENV: development
+      TOMORROW_API_KEY: HlMvZKOYyW6hqnwV3Uk9nAmlAt8jWszd
+      WEATHER_API_KEY: 46fcced0f23d426d904194831260104
+    depends_on:
+      - db
+    command: sh -c "npx prisma migrate deploy && npm run start:dev"
+    restart: unless-stopped
+
+  db:
+    image: postgres:17.6
+    container_name: weather-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mydb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  prisma-studio:
+    image: node:18-alpine
+    container_name: prisma-studio
+    working_dir: /app
+    volumes:
+      - ./:/app
+    ports:
+      - "5556:5555"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/mydb
+      NODE_ENV: development
+    depends_on:
+      - db
+    command: npx prisma studio
+
+volumes:
+  postgres_data:
